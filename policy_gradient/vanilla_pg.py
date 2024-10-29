@@ -49,23 +49,24 @@ class VPGAgent:
         entropy = dist.entropy()
         return action.item(), log_prob, entropy
     
-    # Generalized Advantage Estimation (learn this later)
-    # Note that it looks like RTG calculation since A replaces R lol
-    def compute_gae(self, rewards, values, dones):
+    # Generalized Advantage Estimation
+    def compute_gae(self, rewards, values, dones): # values are estimated by value net
         advantages = []
         gae = 0
-        next_value = 0
+        next_value = 0 # at end next value must be 0
 
         for i in reversed(range(len(rewards))):
+            # when you interate from end it's basically recursion
             if dones[i]:
                 next_value = 0
-            delta = rewards[i] + self.gamma * next_value - values[i] # r(t) + gamma * V(t+1) - V(t)
-            gae = delta + self.gamma * self.lam * gae
-            advantages.insert(0, gae)
+            delta = rewards[i] + self.gamma * next_value - values[i] # TD: r(t) + gamma * V(t+1) - V(t)
+            # we recursivley update gae, using lambda to control variance-bias tradeoff
+            gae = delta + self.gamma * self.lam * gae # A(i) = delta(i) + gamma * lambda * delta(i+1) + (gamma * lambda)^2 * delta(i+2) +...
+            advantages.insert(0, gae) # note that you are building this from the end to maintain correct order
             next_value = values[i]
         
         returns = [adv + val for adv, val in zip(advantages, values)] # by definition
-        return advantages, returns
+        return advantages, returns # adv updates policy net and returns updates value function
     
     def update(self, trajectories):
         # NOTE: You can also do this with a Memory NamedTuple called Experience Replay as in DQN
