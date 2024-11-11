@@ -1,5 +1,5 @@
 import gymnasium as gym
-import utils.envs
+import envs 
 
 def test_environment():
 
