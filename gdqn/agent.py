@@ -73,34 +73,16 @@ class GDQN(nn.Module):
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
     def forward(self, x):
-        # Unpack the tuple -- (output: topmost layer, h_n: hidden state of each layer)
-        # output is a tensor of batch_size, seq_length, hidden_size dimensions
-        x += 1e-8 # stabalize training
+        x += 1e-8  # stabilize training
 
-        if torch.isnan(x).any():
-            print("Step: input")
-            print("NaN value detected in x:", x)
-
-        x, _ = self.gru1(x)  
+        x, _ = self.gru1(x)
         x = self.dropout1(x)
-
-        if torch.isnan(x).any():
-            print("Step: GRU network 1 + Dropout 1")
-            print("NaN value detected in x:", x)
         
-        x, _ = self.gru2(x)  # Unpack the tuple
+        x, _ = self.gru2(x)
         x = self.dropout2(x)
-
-        if torch.isnan(x).any():
-            print("Step: GRU network 2 + Dropout 2")
-            print("NaN value detected in x:", x)
 
         # We only need the last timestep output for the fully-connected layer
         x = self.fc(x[:, -1, :])
-
-        if torch.isnan(x).any():
-            print("Step: After fc layer")
-            print("NaN value detected in x:", x)
 
         return x
     
