@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from utils.helper import plot_durations
+from gdqn.utils import plot_durations
 
 import logging
 logging.basicConfig(filename="training.log", level=logging.INFO)
