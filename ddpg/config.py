@@ -5,12 +5,12 @@
 #******************************
 
 #ENV_NAME = 'BipedalWalkerHardcore-v3'
-# ENV_NAME = 'LunarLanderContinuous-v2'
-ENV_NAME = 'Pendulum-v1'
+ENV_NAME = 'LunarLanderContinuous-v3'
+# ENV_NAME = 'Pendulum-v1'
 
 
-PATH_SAVE = "../models/"
-PATH_LOAD = "../models/"
+PATH_SAVE = "./"
+PATH_LOAD = None
 #PATH_LOAD = "../model/save_agent_202102130731"
 
 #******************************
@@ -53,6 +53,6 @@ DT=1e-1
 #********** Main **************
 #******************************
 
-MAX_GAMES = 250
+MAX_GAMES = 2000
 EVALUATION_FREQUENCY = 100
 SAVE_FREQUENCY = 200

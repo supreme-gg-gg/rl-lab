@@ -15,9 +15,16 @@ from agent import *
 
 def main(args):
 
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+
     if args.inference:
         env = gym.make(ENV_NAME, render_mode="human")
-        agent = DDPGAgent(env)
+        agent = DDPGAgent(env, device)
 
         if PATH_LOAD is not None:
             print("loading weights")
@@ -37,7 +44,7 @@ def main(args):
         return
     
     env = gym.make(ENV_NAME)
-    agent = DDPGAgent(env)
+    agent = DDPGAgent(env, device)
     
     config = {
         "learning_rate_actor": ACTOR_LR,

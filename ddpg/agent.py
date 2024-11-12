@@ -8,7 +8,7 @@ from config import *
 import wandb
 
 class DDPGAgent():
-    def __init__(self, env, actor_lr=ACTOR_LR, critic_lr=CRITIC_LR, gamma=GAMMA, max_size=BUFFER_CAPACITY, 
+    def __init__(self, env, device, actor_lr=ACTOR_LR, critic_lr=CRITIC_LR, gamma=GAMMA, max_size=BUFFER_CAPACITY, 
                  tau=TAU, path_save=PATH_SAVE, path_load=PATH_LOAD) -> None:
         
         self.gamma = gamma
@@ -23,10 +23,10 @@ class DDPGAgent():
         self.path_save = path_save
         self.path_load = path_load
 
-        self.actor = Actor(obs_dim=self.obs_dim, actions_dim=self.actions_dim, upper_bound=self.upper_bound)
-        self.critic = Critic(obs_dim=self.obs_dim, act_dim=self.actions_dim)
-        self.target_actor = Actor(obs_dim=self.obs_dim, actions_dim=self.actions_dim, upper_bound=self.upper_bound)
-        self.target_critic = Critic(obs_dim=self.obs_dim, act_dim=self.actions_dim)
+        self.actor = Actor(obs_dim=self.obs_dim, actions_dim=self.actions_dim, upper_bound=self.upper_bound).to(device)
+        self.critic = Critic(obs_dim=self.obs_dim, act_dim=self.actions_dim).to(device)
+        self.target_actor = Actor(obs_dim=self.obs_dim, actions_dim=self.actions_dim, upper_bound=self.upper_bound).to(device)
+        self.target_critic = Critic(obs_dim=self.obs_dim, act_dim=self.actions_dim).to(device)
 
         self.target_actor.load_state_dict(self.actor.state_dict())
         self.target_critic.load_state_dict(self.critic.state_dict())
@@ -37,6 +37,8 @@ class DDPGAgent():
         # self.target_critic_optimizer = torch.optim.Adam(self.target_critic.parameters(), lr=self.critic_lr)
 
         self.noise = np.zeros(self.actions_dim)
+
+        self.device = device
 
     def update_target_networks(self, tau):
         # Soft update for target actor
@@ -78,8 +80,8 @@ class DDPGAgent():
         if observation.ndim == 1:
             observation = np.expand_dims(observation, axis=0)
 
-        state = torch.tensor(observation, dtype=torch.float32)
-        actions = self.actor(state).detach().numpy()
+        state = torch.tensor(observation, dtype=torch.float32).to(self.device)
+        actions = self.actor(state).detach().cpu().numpy()
         if not evaluation:
             self.noise = self._ornstein_uhlenbeck_process(noise)
             actions += self.noise
@@ -93,11 +95,11 @@ class DDPGAgent():
         
         states, actions, rewards, next_states, dones = self.replay_buffer.sample()
 
-        states = torch.tensor(states, dtype=torch.float32)
-        actions = torch.tensor(actions, dtype=torch.float32)
-        rewards = torch.tensor(rewards, dtype=torch.float32)
-        next_states = torch.tensor(next_states, dtype=torch.float32)
-        dones = torch.tensor(dones, dtype=torch.float32)
+        states = torch.tensor(states, dtype=torch.float32).to(self.device)
+        actions = torch.tensor(actions, dtype=torch.float32).to(self.device)
+        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
+        next_states = torch.tensor(next_states, dtype=torch.float32).to(self.device)
+        dones = torch.tensor(dones, dtype=torch.float32).to(self.device)
 
         # almost exactly as how you train DQN
         with torch.no_grad():
