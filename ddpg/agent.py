@@ -5,6 +5,7 @@ import numpy as np
 from networks import *
 from replay_buffer import *
 from config import *
+import wandb
 
 class DDPGAgent():
     def __init__(self, env, actor_lr=ACTOR_LR, critic_lr=CRITIC_LR, gamma=GAMMA, max_size=BUFFER_CAPACITY, 
@@ -38,18 +39,15 @@ class DDPGAgent():
         self.noise = np.zeros(self.actions_dim)
 
     def update_target_networks(self, tau):
-        target_actor_state_dict = self.target_actor.state_dict()
-        actor_state_dict = self.actor.state_dict()
-        for key in target_actor_state_dict:
-            target_actor_state_dict[key] = tau * actor_state_dict[key] + (1 - tau) * target_actor_state_dict[key]
-        self.target_actor.load_state_dict(target_actor_state_dict)
+        # Soft update for target actor
+        for target_param, param in zip(self.target_actor.parameters(), self.actor.parameters()):
+            target_param.data.copy_(tau * param.data + (1.0 - tau) * target_param.data)
 
-        target_critic_state_dict = self.target_critic.state_dict()
-        critic_state_dict = self.critic.state_dict()
-        for key in target_critic_state_dict:
-            target_critic_state_dict[key] = tau * critic_state_dict[key] + (1 - tau) * target_critic_state_dict[key]
-        self.target_critic.load_state_dict(target_critic_state_dict)
+        # Soft update for target critic
+        for target_param, param in zip(self.target_critic.parameters(), self.critic.parameters()):
+            target_param.data.copy_(tau * param.data + (1.0 - tau) * target_param.data)
 
+    # for just inference, only load and save actor and critic.pth but not targets
     def save_models(self):
         print('... saving models ...')
         torch.save(self.actor.state_dict(), os.path.join(self.path_save, 'actor.pth'))
@@ -59,10 +57,10 @@ class DDPGAgent():
 
     def load_models(self):
         print('... loading models ...')
-        self.actor.load_state_dict(torch.load(os.path.join(self.path_load, 'actor.pth')))
-        self.critic.load_state_dict(torch.load(os.path.join(self.path_load, 'critic.pth')))
-        self.target_actor.load_state_dict(torch.load(os.path.join(self.path_load, 'target_actor.pth')))
-        self.target_critic.load_state_dict(torch.load(os.path.join(self.path_load, 'target_critic.pth')))
+        self.actor.load_state_dict(torch.load(os.path.join(self.path_load, 'actor.pth'), weights_only=True))
+        self.critic.load_state_dict(torch.load(os.path.join(self.path_load, 'critic.pth'), weights_only=True))
+        self.target_actor.load_state_dict(torch.load(os.path.join(self.path_load, 'target_actor.pth'), weights_only=True))
+        self.target_critic.load_state_dict(torch.load(os.path.join(self.path_load, 'target_critic.pth'), weights_only=True))
 
     # exploration strategy for deterministic policy
     # simplest: add noise to the action returned by Agent
@@ -114,10 +112,11 @@ class DDPGAgent():
 
         self.critic_optimizer.zero_grad()
         critic_loss.backward()
-        torch.nn.utils.clip_grad_value_(self.critic.parameters(), 100)
+        torch.nn.utils.clip_grad_value_(self.critic.parameters(), 1)
         self.critic_optimizer.step()
 
-        # policy gradient methods (LOOK INTO THESE)
+        # In short you want to take actions that lead to higher Q value
+        # so max the Q(s,a) where a = pi(s)
         policy_actions = self.actor(states)
         actor_loss = -self.critic(states, policy_actions)
 
@@ -127,4 +126,8 @@ class DDPGAgent():
         actor_loss.backward()
         self.actor_optimizer.step()
 
+        wandb.log({"Critic Loss": critic_loss.item(), "Actor Loss": actor_loss.item()})
+
         self.update_target_networks(self.tau)
+
+        
