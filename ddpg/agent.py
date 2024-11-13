@@ -36,8 +36,6 @@ class DDPGAgent():
         # self.target_actor_optimizer = torch.optim.Adam(self.target_actor.parameters(), lr=self.actor_lr)
         # self.target_critic_optimizer = torch.optim.Adam(self.target_critic.parameters(), lr=self.critic_lr)
 
-        self.noise = np.zeros(self.actions_dim)
-
         self.device = device
 
     def update_target_networks(self, tau):
@@ -59,39 +57,37 @@ class DDPGAgent():
 
     def load_models(self):
         print('... loading models ...')
-        self.actor.load_state_dict(torch.load(os.path.join(self.path_load, 'actor.pth'), weights_only=True))
-        self.critic.load_state_dict(torch.load(os.path.join(self.path_load, 'critic.pth'), weights_only=True))
-        self.target_actor.load_state_dict(torch.load(os.path.join(self.path_load, 'target_actor.pth'), weights_only=True))
-        self.target_critic.load_state_dict(torch.load(os.path.join(self.path_load, 'target_critic.pth'), weights_only=True))
+        self.actor.load_state_dict(torch.load(os.path.join(self.path_load, 'actor.pth'), map_location=self.device, weights_only=True))
+        self.critic.load_state_dict(torch.load(os.path.join(self.path_load, 'critic.pth'), map_location=self.device, weights_only=True))
+        self.target_actor.load_state_dict(torch.load(os.path.join(self.path_load, 'target_actor.pth'), map_location=self.device, weights_only=True))
+        self.target_critic.load_state_dict(torch.load(os.path.join(self.path_load, 'target_critic.pth'), map_location=self.device, weights_only=True))
 
     # exploration strategy for deterministic policy
     # simplest: add noise to the action returned by Agent
-    # or: you can also use epsilon greedy, but we are also exploring lol
+    @DeprecationWarning
     def _ornstein_uhlenbeck_process(self, x, theta=THETA, mu=0, dt=DT, std=0.2):
         """
         Ornstein–Uhlenbeck process
         """
         return x + theta * (mu-x) * dt + std * np.sqrt(dt) * np.random.normal(size=self.actions_dim)
     
-    def get_action(self, observation: tuple, noise : np.ndarray, evaluation=False):
+    def get_action(self, observation: tuple, evaluation=False):
 
         observation = np.array(observation, dtype=np.float32)
-
         if observation.ndim == 1:
             observation = np.expand_dims(observation, axis=0)
-
         state = torch.tensor(observation, dtype=torch.float32).to(self.device)
-        actions = self.actor(state).detach().cpu().numpy()
         if not evaluation:
-            self.noise = self._ornstein_uhlenbeck_process(noise)
-            actions += self.noise
+            actions = self.actor.noisy_forward(state).detach().cpu().numpy()
+        else:
+            actions = self.actor.forward(state).detach().cpu().numpy()
         actions = np.clip(actions, self.lower_bound, self.upper_bound)
 
         return actions[0] # Box action shape requries a vector, Discrete -- scalar
     
     def learn(self):
-        if self.replay_buffer.check_buffer_size() == False:
-            return 
+        if self.replay_buffer.check_buffer_size() is False:
+            return 0.0, 0.0, 0.0 # placeholders
         
         states, actions, rewards, next_states, dones = self.replay_buffer.sample()
 
@@ -102,14 +98,12 @@ class DDPGAgent():
         dones = torch.tensor(dones, dtype=torch.float32).to(self.device)
 
         # almost exactly as how you train DQN
-        with torch.no_grad():
+        with torch.no_grad(): # you don't want to train target network
             target_actions = self.target_actor(next_states)
-            target_critic_values = self.target_critic(next_states, target_actions).squeeze(1)
+            target_critic_values = self.target_critic(next_states, target_actions.detach()).squeeze(1)
 
         critic_value = self.critic(states, actions).squeeze(1)
-
         target = rewards + self.gamma * target_critic_values * (1-dones)
-        
         critic_loss = nn.MSELoss()(critic_value, target)
 
         self.critic_optimizer.zero_grad()
@@ -121,15 +115,14 @@ class DDPGAgent():
         # so max the Q(s,a) where a = pi(s)
         policy_actions = self.actor(states)
         actor_loss = -self.critic(states, policy_actions)
-
         actor_loss = actor_loss.mean()
 
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
         self.actor_optimizer.step()
 
-        wandb.log({"Critic Loss": critic_loss.item(), "Actor Loss": actor_loss.item()})
-
         self.update_target_networks(self.tau)
+
+        return critic_loss.item(), actor_loss.item(), critic_value.mean().item()
 
         
