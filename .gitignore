@@ -162,3 +162,5 @@ cython_debug/
 #.idea/
 # Weights and Biases
 wandb/
+# macOS
+.DS_Store
