@@ -5,7 +5,6 @@ from tqdm import tqdm
 import gymnasium as gym
 import numpy as np
 import torch
-from collections import Counter
 
 from config import *
 from replay_buffer import *
@@ -69,10 +68,7 @@ def main(args):
         # dones = np.array([False] * NUM_ENVS)  # Vectorized version
         # score = np.zeros(NUM_ENVS)  # Vectorized version
 
-        timestep = 0
-        max_timesteps = 1000  # Define a maximum number of timesteps per episode
-
-        while not done and timestep < max_timesteps:  # Add timestep condition
+        for t in range(MAX_TIMESTEPS):  # Add timestep condition
             actions = agent.get_action(states)  # Will return single action
             new_states, rewards, terminated, truncated, _ = single_env.step(actions)
             done = terminated or truncated  # Single environment done flag
@@ -83,10 +79,10 @@ def main(args):
 
             states = new_states
 
-            if agent.replay_buffer.buffer_counter > BATCH_SIZE:
-                critic_loss, actor_loss, q_value = agent.learn()
+            critic_loss, actor_loss, q_value = agent.learn()
 
-            timestep += 1  # Increment timestep
+            if done:
+                break
 
         scores.append(score)  # Changed from extend to append for single score
 
@@ -108,13 +104,11 @@ def main(args):
 
     agent.save_models()
 
-    '''
     artifact = wandb.Artifact(name="model_saved", type="model")
     artifact.add_file("../models/actor.pth")
     artifact.add_file("../models/critic.pth")
     artifact.add_file("../models/target_critic.pth")
     wandb.log_artifact(artifact)
-    '''
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="DDPG Training and Inference")

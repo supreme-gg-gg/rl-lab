@@ -4,9 +4,9 @@
 #******** Enviroment **********
 #******************************
 
-# ENV_NAME = 'BipedalWalkerHardcore-v3'
+ENV_NAME = 'BipedalWalkerHardcore-v3'
 # ENV_NAME = 'LunarLanderContinuous-v2'
-ENV_NAME = 'Pendulum-v1'
+# ENV_NAME = 'Pendulum-v1'
 
 # NUM_ENVS = 4
 # TRAINING_STEPS_PER_ENV_STEP = 1
@@ -55,6 +55,7 @@ DT=1e-1
 #********** Main **************
 #******************************
 
-MAX_GAMES = 100
+MAX_GAMES = 2000
 SAVE_FREQUENCY = 200
-ENABLE_WANDB = False
+ENABLE_WANDB = True
+MAX_TIMESTEPS = 700
