@@ -12,7 +12,7 @@ def get_data(stock, scale=True):
     Computes return as well as technical indicators
     that provides a total of 10 feature to the agent.
     '''
-    filepath = f"/Users/supremegg/Documents/GitHub/financial-ml/data/{stock}.csv"
+    filepath = f"../data/{stock}.csv"
     df = pd.read_csv(filepath, parse_dates=True, index_col=0)
     df.Volume = df.Volume.replace(0,1)
     df.drop(columns=["Close"], inplace=True)

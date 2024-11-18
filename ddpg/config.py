@@ -11,8 +11,8 @@ ENV_NAME = 'BipedalWalkerHardcore-v3'
 # NUM_ENVS = 4
 # TRAINING_STEPS_PER_ENV_STEP = 1
 
-PATH_SAVE = "../models"
-PATH_LOAD = "../models"
+PATH_SAVE = "../models/bipedal"
+PATH_LOAD = "../models/bipedal"
 #PATH_LOAD = "../model/save_agent_202102130731"
 
 #******************************
