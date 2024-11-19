@@ -16,7 +16,7 @@ def mlp(sizes: list, activation=nn.Tanh, output_activation=nn.Identity):
         layers += [nn.Linear(sizes[j], sizes[j+1]), act()]
     return nn.Sequential(*layers) # unpack list of layers into individual elements
 
-def inference(path='../models/simple_policy_model.pth', env_name='CartPole-v1', hidden_sizes=[32]):
+def inference(path='../models/cartpole/simple_pg.pth', env_name='CartPole-v1', hidden_sizes=[32]):
     env = gym.make(env_name, render_mode="human")
     assert isinstance(env.observation_space, Box), \
         "This example only works for envs with continuous state spaces."
@@ -175,7 +175,7 @@ def train(env_name='CartPole-v1', hidden_sizes=[32], lr=1e-2,
                 (i, batch_loss, np.mean(batch_rets), np.mean(batch_lens)))
         
     # Save the state dictionary of the model
-    torch.save(logits_net.state_dict(), '../models/simple_policy_model.pth')
+    torch.save(logits_net.state_dict(), '../models/cartpole/simple_pg.pth')
         
 if __name__ == "__main__":
     import argparse
@@ -184,7 +184,7 @@ if __name__ == "__main__":
     parser.add_argument('--render', action='store_true')
     parser.add_argument('--lr', type=float, default=1e-2)
     parser.add_argument('--mode', type=str, choices=['train', 'inference'], default='train')
-    parser.add_argument('--model_path', type=str, default='../models/simple_policy_model.pth')
+    parser.add_argument('--model_path', type=str, default='../models/cartpole/simple_pg.pth')
     args = parser.parse_args()
     print('\nUsing simplest formulation of policy gradient.\n')
     if args.mode == 'train':

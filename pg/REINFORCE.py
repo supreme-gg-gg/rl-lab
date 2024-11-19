@@ -3,35 +3,12 @@
 # except that it has a different update() method and uses A instead of RTG
 
 import torch
-import torch.nn as nn
-from torch.distributions.categorical import Categorical
 from torch.optim import Adam
 import gymnasium as gym
 import argparse
 import matplotlib.pyplot as plt
 
-class PolicyNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super(PolicyNetwork, self).__init__()
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, output_dim)
-
-    def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = self.fc2(x)
-        return Categorical(logits=x) # when inferencing no need to call Categorical again
-
-# If we think of the policy as an actor, value function is the "critic"
-# This, thus, makes a simple actor-critic architecture
-class ValueNetwork(nn.Module):
-    def __init__(self, input_dim, hidden_dim):
-        super(ValueNetwork, self).__init__()
-        self.fc1 = nn.Linear(input_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, 1)
-
-    def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        return self.fc2(x)
+from networks import PolicyNetwork, ValueNetwork
 
 class VPGAgent:
     def __init__(self, state_dim, action_dim, hidden_dim=64, lr=1e-2, gamma=0.9, lam=0.95):
@@ -92,7 +69,7 @@ class VPGAgent:
         # UPDATE VALUE FUNCTION
         self.value_optimizer.zero_grad()
         values = self.value_net(obs).squeeze() # Simple MSE loss
-        value_loss = nn.functional.mse_loss(values, returns)
+        value_loss = torch.nn.functional.mse_loss(values, returns)
         value_loss.backward()
         self.value_optimizer.step()
 
@@ -116,7 +93,7 @@ class VPGAgent:
 
         torch.save(self.policy_net.state_dict(), "../models/vpg.pth")
     
-    def load_model(self, state_dict_path="../models/vpg.pth"):
+    def load_model(self, state_dict_path="../models/cartpole/vpg.pth"):
         self.policy_net.load_state_dict(torch.load(state_dict_path, weights_only=True))
         self.policy_net.eval()
 
