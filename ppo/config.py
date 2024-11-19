@@ -1,0 +1,27 @@
+SAVE_PATH = '../models/acrobot/ppo_model.pth'
+LOAD_PATH = '../models/acrobot/ppo_model.pth'
+
+NUM_ENVS = 4
+LEARNING_RATE = 1e-3
+SEED = 0
+NUM_STEPS = 128 # policy rollout data
+
+ANNEAL_LR = True
+
+GAE = True
+GANMA = 0.9
+LAMBDA = 0.95
+
+NUM_MINIBATCHES = 4
+UPDATE_EPOCHS = 4
+
+NORM_ADVANTAGES = True
+
+CLIP_EPSILON = 0.2
+# CLIP_EPSILON = 0.1
+ENTROPY_COEFFICIENT = 0.01
+VALUE_LOSS_COEFFICIENT = 0.5
+
+MAX_GRAD_NORM = 0.5
+
+TARGET_KL = None

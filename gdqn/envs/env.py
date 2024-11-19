@@ -1,7 +1,8 @@
-import gymnasium as gym, numpy as np
-from gymnasium import spaces
-from utils.helper import get_data
 import logging
+import gymnasium as gym
+import numpy as np
+from gymnasium import spaces
+from gdqn.utils import get_data
 
 logging.basicConfig(filename="training.log", level=logging.INFO)
 

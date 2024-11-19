@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
-from utils.helper import get_data
+from gdqn.utils import get_data
 
 import matplotlib
 matplotlib.use('TkAgg')
