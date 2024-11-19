@@ -1,6 +1,5 @@
 import gymnasium as gym
-import utils.envs
-# from ..utils.envs import *
+import envs 
 
 def test_environment():
 
@@ -9,8 +8,6 @@ def test_environment():
 
     Episodes=3
     obs = []
-
-    print(f"(sequence_length, n_feautres): {env.reset()[0].shape}")
 
     for _ in range(Episodes):
         observation = env.reset()[0]

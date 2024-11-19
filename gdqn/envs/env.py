@@ -1,6 +1,10 @@
-import gymnasium as gym, numpy as np, pandas as pd
+import logging
+import gymnasium as gym
+import numpy as np
 from gymnasium import spaces
-from utils.helper import get_data
+from gdqn.utils import get_data
+
+logging.basicConfig(filename="training.log", level=logging.INFO)
 
 '''
 The environment will not return single feature vectors for each observation.
@@ -29,10 +33,10 @@ class TradingEnv(gym.Env):
         self.steps = steps
         self.current_step = 0
         # IMPORTANT!! This file path is relative to where you run the script that imports this class
-        self.data, self.mean, self.std = get_data("GOOG")
-        self.std.drop(["Return"], inplace=True)
-        self.mean.drop(["Return"], inplace=True)
+        self.data = get_data("GOOG")
         self.episode = -1
+        # self.asset = 10_000
+
         self.actions = np.zeros(self.steps)
         self.rtn = np.ones(self.steps)
         self.mkt_rtn = np.zeros(self.steps)
@@ -67,22 +71,20 @@ class TradingEnv(gym.Env):
         self.state_buffer = np.zeros((self.sequence_length, 10), dtype=np.float32)
 
         if self.episode != -1:
-            self.df = self.filter_data(self.episode, 1)
+            # Each episode uses data from a different year
+            # The first time we call reset is to initialize agent (episode = -1)
+            # Then we call reset for episode 0, 1, 2, etc.
+            start_idx = self.episode * 252
+            end_idx = start_idx + 252
+            self.df = self.data.iloc[start_idx:end_idx].copy()
         
         self.episode += 1
         
         return (self.state_buffer, {})
-    
-    def filter_data(self, start, period):
-        # Each episode uses data from a different year
-        # The first time we call reset is to initialize agent (episode = -1)
-        # Then we call reset for episode 0, 1, 2, etc.
-        start_idx = start * 252
-        end_idx = start_idx + 252 * period
-        return self.data.iloc[start_idx:end_idx].copy()
 
     def step(self, action):
-        assert self.action_space.contains(action), f" Invalid Action: {action} ({type(action)}) invalid"
+        assert self.action_space.contains(action), f"{action} ({type(action)}) invalid"
+        logging.info(f"{action} ({type(action)}) invalid" )
 
         # Update the state sequence with the latest observation
         obs = self.df.iloc[self.current_step]

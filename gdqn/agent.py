@@ -5,8 +5,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from utils.helper import plot_durations
+from gdqn.utils import plot_durations
+
 import logging
+logging.basicConfig(filename="training.log", level=logging.INFO)
 
 with open("config.json", "r") as f:
     config = json.load(f)
@@ -71,14 +73,12 @@ class GDQN(nn.Module):
     # Called with either one element to determine next action, or a batch
     # during optimization. Returns tensor([[left0exp,right0exp]...]).
     def forward(self, x):
-        # Unpack the tuple -- (output: topmost layer, h_n: hidden state of each layer)
-        # output is a tensor of batch_size, seq_length, hidden_size dimensions
-        x += 1e-8 # stabalize training
+        x += 1e-8  # stabilize training
 
-        x, _ = self.gru1(x)  
+        x, _ = self.gru1(x)
         x = self.dropout1(x)
         
-        x, _ = self.gru2(x)  # Unpack the tuple
+        x, _ = self.gru2(x)
         x = self.dropout2(x)
 
         # We only need the last timestep output for the fully-connected layer
@@ -88,7 +88,7 @@ class GDQN(nn.Module):
     
 class DQNAgent():
 
-    def __init__(self, env, device, model_to_load=None):
+    def __init__(self, env, device):
         n_observations, n_features = env.reset()[0].shape # returns a sequence of observations in shape (sequence_length, n_features)
         n_actions = env.action_space.n
 
@@ -102,37 +102,24 @@ class DQNAgent():
         self.n_observations = n_observations # this is equivalent to sequence_length, which is defined in the env
         self.n_features = n_features
         self.policy_net = policy_net
-
-        # Loading model is mostly for testing purposes to save time (for now)
-        if model_to_load != None:
-            self.policy_net.load_state_dict(torch.load(model_to_load, map_location=self.device, weights_only=True))
-
         self.target_net = target_net
         self.optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
         self.memory = ReplayMemory(MEMORY_SIZE)
         self.steps_done = 0
         self.num_steps_to_update = NUM_STEPS_TO_UPDATE
-
-        # Set up the training logger
-        train_logger = logging.getLogger('train')
-        train_logger.setLevel(logging.INFO)
-
-        # File handler for training
-        train_handler = logging.FileHandler('logs/train.log', mode='w')
-        train_formatter = logging.Formatter('[%(asctime)s] %(levelname)s: [TRAIN] %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-        train_handler.setFormatter(train_formatter)
-        train_logger.addHandler(train_handler)
-
-        self.logger = train_logger
-
-    def select_action(self, state, train=True):
+    
+    def select_action(self, state):
 
         eps_threshold = EPS_MIN + (EPS - EPS_MIN) * math.exp(-1. * self.steps_done / EPS_DECAY)
         self.steps_done += 1
 
-        if random.random() > eps_threshold or not train:
+        if random.random() > eps_threshold:
             with torch.no_grad():
                 x = self.policy_net(state)
+                if x.max(1).indices.view(1, 1).item() == -1:
+                    print("Action is -1")
+                    print("State: ", state)
+                    print(x)
                 return x.max(1).indices.view(1, 1)
         else:
             action = self.env.action_space.sample()
@@ -204,7 +191,6 @@ class DQNAgent():
             for t in count():
                 action = self.select_action(state)
                 observation, reward, terminated, truncated, _ = self.env.step(action.item())
-                self.logger.info(f"reward at timestep {t} of episode {i}: {reward}")
                 reward = torch.tensor([reward], device=self.device, dtype=torch.float32)
                 done = terminated or truncated
 
@@ -228,14 +214,14 @@ class DQNAgent():
                     # duration is how long it took to run that episode
                     episode_durations.append(t + 1)
                     plot_durations(episode_durations)
-                    self.logger.info(f"Episode {i} completed in {t + 1} steps")
                     break
-                
+
+                logging.info(f"Episode {i} completed in {t + 1} steps")
         
         # IMPORTANT: the path of model is relative to where the script is run
         # for now it is ONLY from the gdqn-model.ipynb notebook
         # but in the future we might need to make it more flexible!!
-        torch.save(self.policy_net.state_dict(), "../models/gdqn_trained.pth")
+        torch.save(self.policy_net.state_dict(), "../../models/gdqn_trained.pth")
         print("Model saved as gdqn_trained.pth")
 
         return episode_durations
