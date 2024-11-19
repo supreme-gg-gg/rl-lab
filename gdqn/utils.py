@@ -18,7 +18,7 @@ def get_data(stock, scale=True):
     df.drop(columns=["Close"], inplace=True)
     df['Return'] = df["Adj Close"].pct_change()
 
-    # these functions append to df directly
+    # these functions append to df directly (i.e. inline)
     get_sma(df)
     get_ema(df)
     get_macd(df)
@@ -35,7 +35,7 @@ def get_data(stock, scale=True):
     # The first 15 rows are removed as they contain NaN values
     # due to the computation of technical indicators
 
-    return df[15:]
+    return df[15:], mean, std
 
 def get_sma(df, window=15):
 
