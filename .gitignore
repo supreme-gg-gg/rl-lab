@@ -162,5 +162,7 @@ cython_debug/
 #.idea/
 # Weights and Biases
 wandb/
+runs/
+videos/
 # macOS
 .DS_Store
